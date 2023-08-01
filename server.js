@@ -67,11 +67,14 @@ return res.send("user does not exist")
     )
 
     routes.post('/signup', async function(req, res){
-        console.log(req.body);
+       
         const doclen = await stupid_students_collection.find().count()
-        const find_Exist_user = await stupid_students_collection.find({email: req.body.email})
-        if(find_Exist_user)
+        const find_Exist_user = await stupid_students_collection.find({email: req.body.email}).toArray();
+       
+        if(find_Exist_user[0] && find_Exist_user[0].email){
+            // console.log("existing", find_Exist_user)
         return res.send("user email already exists")
+        }
         const stupid_salt = await bcrypt.genSalt(10)
         const important_hash = await bcrypt.hash(req.body.password,stupid_salt)
         req.body["password"] = important_hash
@@ -88,7 +91,7 @@ return res.send("user does not exist")
 
 
 
-app.use(cors("*"))
+app.use(cors({origin: "*"}))
 app.use(express.json())
 app.use(Routes())
 
