@@ -88,7 +88,7 @@ return res.send("user does not exist")
 
 
 
-app.use(cors())
+app.use(cors("*"))
 app.use(express.json())
 app.use(Routes())
 
