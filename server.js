@@ -21,6 +21,7 @@ const connection_db = async ()=>{
    let list_of_collection =  await con.db("nodejs").listCollections().toArray();
    console.log("\n", MAGENTA_COLOR_CODE, "database is connected \n");
    console.log("\n", CYAN_COLOR_CODE, "list_of_collection\n ")
+  
    list_of_collection.forEach((e,index)=>console.log(index+1, ").",YELLOW_COLOR_CODE, e.name))
    }
    stupid_students_collection =   con.db("nodejs").collection("stupid_students");
@@ -54,7 +55,7 @@ function Routes(){
               {  let token = TokenGen(req.body.email) 
                 console.log(token, typeof(token))
                 if(typeof(token)  == typeof("hello"))
-                return  res.send(token) 
+                return  res.json({token: token, email: req.body.email}) 
                 return res.send("something went wrong")
              }
              
@@ -79,9 +80,23 @@ return res.send("user does not exist")
         const important_hash = await bcrypt.hash(req.body.password,stupid_salt)
         req.body["password"] = important_hash
         await stupid_students_collection.insertOne({...req.body})
-        if(await stupid_students_collection.find().count() > doclen) 
-        return res.send("user created successfully")
+        if(await stupid_students_collection.find().count() > doclen) {
+            let token = TokenGen(req.body.email)
+        return res.send(token)
+        }
             return res.send("something went wrong")
+    })
+
+    routes.post("/user", async (req, res)=>{
+        
+        const find_Exist_user = await stupid_students_collection.find({email: req.body.PrevEmail}).toArray();
+        if(find_Exist_user[0] && find_Exist_user[0].email){
+            await stupid_students_collection.updateOne({email: req.body.PrevEmail}, {$set: 
+                {email: req.body.Newemail}});
+                find_Exist_user = await stupid_students_collection.find({email: req.body.Newemail}).toArray();
+        return res.send(find_Exist_user[0].email);
+        }
+    return res.send("")
     })
         
 
@@ -106,7 +121,7 @@ const CYAN_COLOR_CODE = '\x1b[36m';
 async function StartEngine(){
     await DBConnection()
     app.listen(8080, ()=>console.log(`\n ${RED_COLOR_CODE}server is running on port 8080${RESET_COLOR_CODE} \n`))
-    const docs = await stupid_students_collection.find().toArray()
-    console.log(docs)
+    // const docs = await stupid_students_collection.find().toArray()
+    // console.log(docs)
 }
 StartEngine()
