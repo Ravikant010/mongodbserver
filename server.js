@@ -46,26 +46,31 @@ function Routes(){
     const routes = express.Router()
 
 
-    routes.post('/login', async function(req, res){
-      const user  =await stupid_students_collection.find({email: req.body.email}).toArray() 
-     console.log("user", user)
-      if(user){
-            const isUserPasswordMatch=   await bcrypt.compare(req.body.password, user[0].password)
-              if(isUserPasswordMatch)
-              {  let token = TokenGen(req.body.email) 
-                console.log(token, typeof(token))
-                if(typeof(token)  == typeof("hello"))
-                return  res.json({token: token, email: req.body.email}) 
-                return res.send("something went wrong")
-             }
-             
-            //  res.send("user does not exist")
-             
-
-}
-return res.send("user does not exist")
-    }
-    )
+    routes.post('/login', async function (req, res) {
+      console.log(req.body)
+        try {
+          const user = await stupid_students_collection.findOne({ email: req.body.email });
+          console.log("user", user);
+          if(user == null)
+      return res.send(false)
+          if (user) {
+            const isUserPasswordMatch = await bcrypt.compare(req.body.password, user.password);
+            if (isUserPasswordMatch) {
+              const token = TokenGen(req.body.email);
+              console.log(token, typeof (token));
+              if (typeof token === 'string') {
+                return res.json({ token: token, email: req.body.email });
+              }
+              return res.status(500).send("Something went wrong");
+            }
+          }
+          
+          return res.status(401).send("User does not exist or password is incorrect");
+        } catch (error) {
+          console.error("Error occurred:", error);
+          return res.status(500).send("An error occurred while processing the request.");
+        }
+      });
 
     routes.post('/signup', async function(req, res){
        
@@ -87,19 +92,45 @@ return res.send("user does not exist")
             return res.send("something went wrong")
     })
 
-    routes.post("/user", async (req, res)=>{
-        
-        const find_Exist_user = await stupid_students_collection.find({email: req.body.PrevEmail}).toArray();
-        if(find_Exist_user[0] && find_Exist_user[0].email){
-            await stupid_students_collection.updateOne({email: req.body.PrevEmail}, {$set: 
-                {email: req.body.Newemail}});
-                find_Exist_user = await stupid_students_collection.find({email: req.body.Newemail}).toArray();
-        return res.send(find_Exist_user[0].email);
+    routes.post("/user", async (req, res) => {
+        console.log("req.body", req.body);
+      
+        try {
+          const findExistUser = await stupid_students_collection.find({ email: req.body.PrevEmail }).toArray();
+          
+          if (findExistUser[0] && findExistUser[0].email) {
+            await stupid_students_collection.updateOne(
+              { email: req.body.PrevEmail },
+              { $set: { email: req.body.Newemail } }
+            );
+            
+            const updatedUser = await stupid_students_collection.find({ email: req.body.Newemail }).toArray();
+            return res.send(updatedUser[0].email);
+          }
+        } catch (error) {
+          console.error("Error occurred:", error);
+          return res.status(500).send("An error occurred while processing the request.");
         }
-    return res.send("")
-    })
+      
+        return res.send("");
+      });
+      
         
-
+routes.post("/delete", async(req, res) => {
+    try {
+        const emailToDelete = req.body.email;
+        const deletedUser = await stupid_students_collection.findOneAndDelete({ email: emailToDelete });
+    
+        if (deletedUser.value && deletedUser.value.email) {
+          return res.send(`User with email ${deletedUser.value.email} has been deleted.`);
+        } else {
+          return res.status(404).send(`User with email ${emailToDelete} not found.`);
+        }
+      } catch (error) {
+        console.error("Error occurred:", error);
+        return res.status(500).send("An error occurred while processing the request.");
+      }
+})
     return routes
 }
 
